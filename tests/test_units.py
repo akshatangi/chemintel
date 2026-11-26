@@ -91,6 +91,40 @@ def test_reaction_precedents_are_labelled_and_ranked():
     assert r[0]["record"]["id"] == "syn-1" and "not a prediction" in r[0]["note"]
 
 
+
+
+def test_reaction_no_match_returns_nothing():
+    import os
+    from chemintel.reactions import load_records, build_index, find_precedents
+    p = os.path.join(os.path.dirname(__file__), "..", "examples", "reactions_SYNTHETIC.jsonl")
+    idx = build_index(load_records(p))
+    assert find_precedents(idx, "zzzz qqqq", k=3) == []
+    assert find_precedents(idx, "suzuki coupling boronic acid palladium", k=3) == []   # shares no word with the records
+    assert find_precedents(idx, "the and of", k=3) == []
+
+
+def test_ord_importer_roundtrip(tmp_path=None):
+    try:
+        import pyarrow as pa, pyarrow.parquet as pq
+        from ord_schema.proto import reaction_pb2
+    except Exception:
+        print("skip (pyarrow/ord-schema not installed)"); return
+    import json, subprocess, sys, tempfile, os
+    r = reaction_pb2.Reaction()
+    r.identifiers.add(value="9.9 [Test] Fake amination")
+    c = r.inputs["amine"].components.add(); c.identifiers.add(value="CCN", type=reaction_pb2.CompoundIdentifier.SMILES)
+    o = r.outcomes.add(); pr = o.products.add(); pr.identifiers.add(value="CCNC", type=reaction_pb2.CompoundIdentifier.SMILES)
+    m = pr.measurements.add(type=reaction_pb2.ProductMeasurement.YIELD); m.percentage.value = 42.0
+    d = tempfile.mkdtemp(); f = os.path.join(d, "t.parquet")
+    pq.write_table(pa.table({"reaction_id": ["ord-test"], "reaction": [r.SerializeToString()]}), f)
+    out = os.path.join(d, "o.jsonl")
+    root = os.path.join(os.path.dirname(__file__), "..")
+    subprocess.check_call([sys.executable, os.path.join(root, "scripts", "07_import_ord.py"), "--dataset", f, "--out", out, "--limit", "5"], stdout=subprocess.DEVNULL)
+    rec = json.loads(open(out).read())
+    assert rec["id"] == "ord-test" and "CCN" in rec["reactants"] and rec["products"] == "CCNC"
+    assert rec["yield"].startswith("42.0") and "CC BY-SA 4.0" in rec["source"]
+
+
 if __name__ == "__main__":
     for n, f in list(globals().items()):
         if n.startswith("test_"):
