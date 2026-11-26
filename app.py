@@ -90,3 +90,27 @@ if st.button("Ask", type="primary") and q.strip():
                     st.write(gen.generate(build_rag_prompt(q, passages), temperature=temp))
             except Exception as e:
                 st.error(f"Generator failed: {e}")
+
+st.divider()
+st.subheader("Datasheet fields (rule-based, heuristic)")
+if "pdf_index" in st.session_state:
+    if st.button("Extract fields from uploaded PDF"):
+        from chemintel.datasheet import extract_regex
+        found = extract_regex(st.session_state["pdf_index"].chunks)
+        if found:
+            st.dataframe([{k: d[k] for k in ("field", "value", "unit", "source", "method", "evidence")} for d in found], use_container_width=True)
+            st.caption("Values are copied from the text by patterns. Not checked by a chemist; fields not listed were not found.")
+        else:
+            st.info("No known fields found in the text.")
+else:
+    st.caption("Upload a PDF in the sidebar to enable.")
+
+st.subheader("Reaction precedents (retrieval only, not a prediction)")
+rpath = st.text_input("Reaction records file (JSON lines)", "examples/reactions_SYNTHETIC.jsonl")
+rq = st.text_input("Reaction query (reactants, products, conditions)", "acetic acid and ethanol esterification")
+if st.button("Find precedents") and os.path.exists(rpath):
+    from chemintel.reactions import load_records, build_index, find_precedents, DISCLAIMER
+    for h in find_precedents(build_index(load_records(rpath)), rq, k=3):
+        r = h["record"]
+        st.write(f"**{r.get('reactants','')} -> {r.get('products','')}**  | conditions: {r.get('conditions','')}  | source: {r.get('source','')}")
+    st.caption(DISCLAIMER)
