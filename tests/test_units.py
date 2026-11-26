@@ -58,6 +58,39 @@ def test_pdf_pages_are_indexed_with_page_numbers():
     assert search_many([ix], "zzzz", k=1) == []
 
 
+
+
+def test_datasheet_regex_fields_and_provenance():
+    from chemintel.datasheet import extract_regex
+    ch = [{"text": "Density at 25 C: 1.35 g/cm3\nFlash point: 38 C (closed cup)\nPot life: 4 hours at 23 C\nH226 Flammable liquid and vapour. CAS 64-17-5 and 64-17-6 listed. Shelf life 12 months.", "source": "x.pdf, page 1"}]
+    got = {(d["field"], d["value"], d["unit"]) for d in extract_regex(ch)}
+    assert ("density", "1.35", "g/cm3") in got and ("flash point", "38", "C") in got
+    assert ("pot life", "4", "hours") in got and ("shelf life", "12", "months") in got
+    assert any(f == "hazard statement" and v == "H226" for f, v, _ in got)
+    cas = {v for f, v, _ in got if f.startswith("CAS")}
+    assert cas == {"64-17-5"}               # 64-17-6 fails the checksum
+    assert all(d["source"] == "x.pdf, page 1" and d["method"] == "regex" for d in extract_regex(ch))
+    assert extract_regex([{"text": "nothing here", "source": "s"}]) == []
+
+
+def test_datasheet_llm_values_must_appear_in_text():
+    from chemintel.datasheet import extract_llm
+    class Fake:
+        def generate(self, p, **k):
+            return '[{"field":"flash point","value":"38","unit":"C"},{"field":"boiling point","value":"99","unit":"C"}]'
+    kept, rej = extract_llm(Fake(), [{"text": "Flash point: 38 C", "source": "s"}])
+    assert [k["value"] for k in kept] == ["38"] and rej == 1 and "not validated" in kept[0]["method"]
+
+
+def test_reaction_precedents_are_labelled_and_ranked():
+    import os
+    from chemintel.reactions import load_records, build_index, find_precedents
+    p = os.path.join(os.path.dirname(__file__), "..", "examples", "reactions_SYNTHETIC.jsonl")
+    idx = build_index(load_records(p))
+    r = find_precedents(idx, "acetic acid and ethanol esterification", k=1)
+    assert r[0]["record"]["id"] == "syn-1" and "not a prediction" in r[0]["note"]
+
+
 if __name__ == "__main__":
     for n, f in list(globals().items()):
         if n.startswith("test_"):
