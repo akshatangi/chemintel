@@ -84,6 +84,14 @@ Cite ChemPile (arXiv:2505.12534) and ChemBench (arXiv:2404.01475).
 `bash tests/smoke_pipeline.sh` (tiny random model, needs network once for the gpt2 tokenizer and ChemBench).
 
 
+## Minimal on-device smoke test (Mac, not yet run by us)
+No language-model accuracy is claimed anywhere in this package; the only numbers are the two model-free baselines above.
+1. `python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt` (torch is large; skip bitsandbytes on a Mac).
+2. `python scripts/01_prepare_corpus.py --out data --max-train-docs 300 --max-valid-docs 20` then `python scripts/02_build_index.py` (small and quick).
+3. `python scripts/04_smoke_generator.py --backend hf --model HuggingFaceTB/SmolLM2-1.7B-Instruct` ONE question. Weights are about 3.4 GB (our estimate) and need roughly 7 GB free RAM at fp32. If it runs out of memory or is slow, retry with `--model HuggingFaceTB/SmolLM2-360M-Instruct`.
+4. `streamlit run app.py`, choose "Local Hugging Face model", upload a text PDF, ask a question.
+Send back the printed output or the error text, the Mac model, and its RAM. Only after step 3 works, run `scripts/05_eval_chembench.py` with `--limit 100` (with and without `--rag`).
+
 ## Status (honest)
 - Verified in a CPU-only sandbox: corpus prep + decontamination, BM25 index, model-free baselines (chance 0.359, BM25 retrieval-only heuristic 0.374 on 2,542 ChemBench MCQs; not LLM results), unit tests incl. PDF page indexing, mock OpenAI-client test, tiny-random-model smoke run of the train/eval code, Streamlit UI in retrieval-only mode (docs/*.png).
 - NOT verified: SmolLM2-1.7B-Instruct running (default model; the chat template, MPS path and LoRA target modules are untested with real weights), any LLM accuracy, real QLoRA training. Run these on a Mac/Colab and report the numbers; do not quote any until measured.
