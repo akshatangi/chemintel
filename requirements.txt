@@ -1,0 +1,10 @@
+# Colab / GPU machine. Versions are not pinned; test with whatever pip resolves and note it in your report.
+torch
+transformers
+peft
+accelerate
+# bitsandbytes   # GPU QLoRA only; install separately on a CUDA machine
+datasets
+streamlit      # demo only
+pypdf
+# fpdf2          # only for tests/test_units.py (PDF test)
