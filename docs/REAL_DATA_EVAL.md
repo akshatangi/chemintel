@@ -16,6 +16,12 @@ I compared the output with the sheet text (pdftotext -layout) by hand.
 | B | pot life 4 hours, shelf life 12 months (flash point says "See MSDS/SDS", correctly not extracted) | shelf life | pot life missed: the value sits on the line after the label | 0 |
 | C | flash point (Part A 28 C; Part B 27 C; mixed 29 C), pot life (4 values by component and temperature), shelf life 12 months | shelf life; first flash value (28 C); first pot life value (6 hrs) | the other flash values and pot life values for other columns | 0 |
 
+Counting rules: a "truth value" is a number written in the sheet next to one of the tool's fields (density, flash point, boiling/melting point, auto-ignition, pot life, shelf life, pH, H-statements, CAS). Every separate number in a multi-column row counts as its own truth value. I counted by reading the sheet text; there is no second labeller. "Wrong" means an extracted value or unit that differs from the sheet text.
+- Truth values: A 5, B 2, C 8 (flash 3, pot life 4, shelf life 1) = 15.
+- Extracted: A 5, B 1, C 3 = 9 values, all matching the sheet text (0 wrong of 9).
+- Found 9 of 15 truth values (A 5 of 5, B 1 of 2, C 3 of 8). Sheet A was used for tuning, so excluding it the held-out result is 4 of 10.
+- No language model was involved; none of this is an LLM result.
+
 Reading: no wrong values in these 3 sheets, but it misses values and takes only the first number when a table row has several. 3 sheets is too few to say more.
 Known limits: text PDFs only; tables are read with pypdf layout mode (default pypdf mode put the labels and values of sheet A in separate lines and missed density); multi-column rows and values on the next line are not handled; unit and name coverage is small.
 
