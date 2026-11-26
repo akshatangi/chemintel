@@ -3,13 +3,23 @@ import io
 from .bm25 import BM25Index, chunk_text
 
 
+def _page_text(page):
+    """Layout mode keeps table rows (label and value on one line) together; falls back to default extraction on old pypdf."""
+    try:
+        t = page.extract_text(extraction_mode="layout") or ""
+    except TypeError:
+        t = page.extract_text() or ""
+    import re
+    return re.sub(r"[ \t]{2,}", "  ", t).strip()
+
+
 def build_pdf_index(data: bytes, name="uploaded.pdf", chunk_chars=600):
     from pypdf import PdfReader
     reader = PdfReader(io.BytesIO(data))
     idx = BM25Index()
     pages_with_text = 0
     for pno, page in enumerate(reader.pages, 1):
-        text = (page.extract_text() or "").strip()
+        text = _page_text(page)
         if not text:
             continue
         pages_with_text += 1

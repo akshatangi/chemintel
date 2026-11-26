@@ -7,12 +7,13 @@ import json, re
 
 NUM = r"(-?\d+(?:[.,]\d+)?(?:\s*(?:-|to)\s*-?\d+(?:[.,]\d+)?)?)"
 PATTERNS = {
-    "density": (r"density[^0-9\n]{0,40}?(?:at\s*\d+\s*(?:°|deg)?\s*C[^0-9\n]{0,10})?" + NUM + r"\s*(g/cm3|g/cm³|g/ml|kg/m3|kg/m³|g/cc)", "density"),
+    "density": (r"density[^0-9\n]{0,40}?(?:at\s*\d+\s*(?:°|deg)?\s*C[^0-9\n]{0,10})?" + NUM + r"\s*(g/cm3|g/cm³|g/ml|kg/m3|kg/m³|kg/l|g/cc)", "density"),
+    "density_unit_in_label": (r"density\s*\((g/cm3|g/cm³|g/ml|kg/m3|kg/m³|kg/l|g/cc)\)\s*" + NUM, "density"),
     "flash_point": (r"flash\s*point[^0-9\n-]{0,30}" + NUM + r"\s*(?:°\s*)?(C|F)\b", "flash point"),
     "boiling_point": (r"boiling\s*point[^0-9\n-]{0,30}" + NUM + r"\s*(?:°\s*)?(C|F)\b", "boiling point"),
     "melting_point": (r"melting\s*point[^0-9\n-]{0,30}" + NUM + r"\s*(?:°\s*)?(C|F)\b", "melting point"),
     "autoignition": (r"auto-?\s*ignition\s*temp\w*[^0-9\n-]{0,30}" + NUM + r"\s*(?:°\s*)?(C|F)\b", "auto-ignition temperature"),
-    "pot_life": (r"pot\s*life[^0-9\n]{0,30}" + NUM + r"\s*(hours?|hrs?|h|minutes?|min)\b", "pot life"),
+    "pot_life": (r"pot\s*life\s*(?:\([^)]{0,20}\))?[^0-9\n]{0,30}" + NUM + r"\s*(hours?|hrs?|h|minutes?|min)\b", "pot life"),
     "shelf_life": (r"shelf\s*life[^0-9\n]{0,30}" + NUM + r"\s*(months?|years?|days?)\b", "shelf life"),
     "ph": (r"\bpH\b[^0-9\n]{0,20}" + NUM, "pH"),
 }
@@ -33,6 +34,7 @@ def extract_regex(chunks):
         for key, (pat, label) in PATTERNS.items():
             for m in re.finditer(pat, t, re.I):
                 val = m.group(1).strip(); unit = m.group(2).strip() if m.lastindex and m.lastindex >= 2 else ""
+                if key == "density_unit_in_label": val, unit = unit, val
                 k = (key, val, unit)
                 if k in seen: continue
                 seen.add(k)

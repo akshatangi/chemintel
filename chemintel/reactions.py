@@ -28,6 +28,21 @@ def build_index(records):
     return idx
 
 
-def find_precedents(idx, query, k=3):
-    hits = idx.search(query, k=k)
+STOP = {"the", "a", "an", "of", "and", "or", "to", "with", "in", "for", "from", "by", "reaction", "reactions"}
+
+
+def find_precedents(idx, query, k=3, min_coverage=0.5):
+    """Return up to k records. A record is returned only if at least `min_coverage` of the query's content words occur in it,
+    so a query with no real match returns [] instead of a weak 'best of the rest'."""
+    from .bm25 import tokenize
+    qtok = {t for t in tokenize(query) if t not in STOP}
+    if not qtok:
+        return []
+    hits = []
+    for h in idx.search(query, k=max(k * 10, 30)):
+        have = set(tokenize(h["text"]))
+        if len(qtok & have) / len(qtok) >= min_coverage:
+            hits.append(h)
+        if len(hits) == k:
+            break
     return [{"record": idx.records[h["doc_id"]], "score": h["score"], "note": DISCLAIMER} for h in hits]
