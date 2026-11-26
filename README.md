@@ -13,8 +13,8 @@ model you connect, and evaluates on ChemBench multiple-choice questions with and
 | SmolLM2-**135M**-Instruct (same family, not the 1.7B default) smoke test, chat template + LoRA target-module names | **Run** (`scripts/04`): loads and answers; answer quality is poor, nothing measured |
 | Ollama / OpenAI-compatible generator client | **Tested against a mock server only** (`tests/test_openai_client_mock.py`). Not tested with any real model |
 | Language-model accuracy on ChemBench (base, +retrieval, +training) | **Not measured. No numbers exist.** |
-| Datasheet field extraction (`chemintel/datasheet.py`) | **Regex method run and unit-tested** on a synthetic datasheet (heuristic, not validated by a chemist). LLM method: code and fake-model test only, never run with a real model |
-| Reaction precedent retrieval (`chemintel/reactions.py`) | **Run and unit-tested on 2 SYNTHETIC records.** Retrieval of similar recorded reactions only. No feasibility or yield prediction. No real reaction database is shipped; load your own (e.g. ORD, CC BY-SA 4.0) |
+| Datasheet field extraction (`chemintel/datasheet.py`) | **Regex method run on 3 real public data sheets and compared by hand** (0 wrong values, but misses some; see `docs/REAL_DATA_EVAL.md`), plus unit tests. Heuristic, not validated by a chemist. LLM method: code and fake-model test only, never run with a real model |
+| Reaction precedent retrieval (`chemintel/reactions.py`, importer `scripts/07_import_ord.py`) | **Run on 750 real ORD reactions** (one narrow N-arylation subset) with hand-read query checks, plus unit tests on synthetic records. Word-based retrieval, no structure search, no feasibility or yield prediction. ORD data is not shipped (CC BY-SA 4.0). See `docs/REAL_DATA_EVAL.md` |
 
 ## Measured so far (no language model involved)
 ChemBench MCQ, 2,542 questions (243 numeric questions skipped), fixed seed 0, files in `results/`:
@@ -71,7 +71,7 @@ A few million tokens of ChemPile text is a small amount; it may not change ChemB
 
 ## Datasheet extraction and reaction precedents (implemented minimally; see status table)
 - `chemintel/datasheet.py`: regex extraction of density, flash/boiling/melting point, auto-ignition, pot life, shelf life, pH, H-statements and CAS numbers (checksum-validated) from an uploaded text PDF, with page numbers and the evidence text. This is **heuristic**. An optional LLM method keeps a model's value only if it appears literally in the cited passage; that proves presence in the text, not correctness. The LLM method has never been run with a real model. No scoring against hand-labelled datasheets has been done.
-- `chemintel/reactions.py`: retrieves similar recorded reactions from a JSON-lines file you supply. Only 2 clearly SYNTHETIC records ship in `examples/`. It is precedent retrieval, not a validated feasibility prediction. No real reaction data (e.g. ORD, https://github.com/open-reaction-database/ord-data, CC BY-SA 4.0) has been loaded or tested.
+- `chemintel/reactions.py`: retrieves similar recorded reactions from a JSON-lines file; query words must mostly appear in a record or nothing is returned. `scripts/07_import_ord.py` builds that file from ORD parquet files. Only 2 clearly SYNTHETIC records ship in `examples/`. It is precedent retrieval, not a validated feasibility prediction. ORD (https://github.com/open-reaction-database/ord-data, CC BY-SA 4.0) was loaded for one subset only.
 
 ## Data and licences
 See `DATA_LICENSE.md`. This package does **not** include the corpus or the index: download them with the scripts. ChemPile-Education is
@@ -87,7 +87,7 @@ Cite ChemPile (arXiv:2505.12534) and ChemBench (arXiv:2404.01475).
 ## Status (honest)
 - Verified in a CPU-only sandbox: corpus prep + decontamination, BM25 index, model-free baselines (chance 0.359, BM25 retrieval-only heuristic 0.374 on 2,542 ChemBench MCQs; not LLM results), unit tests incl. PDF page indexing, mock OpenAI-client test, tiny-random-model smoke run of the train/eval code, Streamlit UI in retrieval-only mode (docs/*.png).
 - NOT verified: SmolLM2-1.7B-Instruct running (default model; the chat template, MPS path and LoRA target modules are untested with real weights), any LLM accuracy, real QLoRA training. Run these on a Mac/Colab and report the numbers; do not quote any until measured.
-- PDF upload tab: text-based PDFs only (pypdf, BM25 over pages). Datasheet extraction and reaction precedents exist as described in the table; neither has been tested on real datasheets or a real reaction database.
+- PDF upload tab: text-based PDFs only (pypdf, BM25 over pages). Datasheet extraction and reaction precedents exist as described in the table; only the small checks in `docs/REAL_DATA_EVAL.md` exist (3 data sheets, 750 reactions from one source).
 - ChemBench "advanced" tag has only 19 questions, so basic-vs-advanced is not reliable. Decontamination (10-gram + canary) reduces, not eliminates, leakage.
 - Corpus/index are not shipped (ChemPile-Education is CC BY-NC-SA 4.0); regenerate with scripts 01 and 02.
 

@@ -6,5 +6,6 @@ accelerate
 # bitsandbytes   # GPU QLoRA only; install separately on a CUDA machine
 datasets
 streamlit      # demo only
-pypdf
+pypdf>=3.17      # layout extraction mode
 # fpdf2          # only for tests/test_units.py (PDF test)
+# pyarrow, protobuf; pip install --no-deps ord-schema   # only for scripts/07_import_ord.py
